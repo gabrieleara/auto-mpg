@@ -1,5 +1,5 @@
 function main(varargin)
-% MAIN  Executes the whole assignment. It may take some time.
+%MAIN   Executes the whole assignment. It may take some time.
 %
 %   MAIN(param, value, ...) executes the assignment with the given
 %       parameter, see list of parameters below. Multiple parameters can be
@@ -42,6 +42,12 @@ function main(varargin)
 %        .) 0, false, 'false', 'off' -> verbose mode off;
 %        .) 1, true, 'true', 'on'    -> verbose mode on.
 %
+%   - 'equalAxis' (default: false) valid only when display part is not
+%   skipped. It uses same axis on both sides of each subplot.
+%   Accepted values:
+%        .) 0, false, 'false', 'off' -> each plot has its own limits;
+%        .) 1, true, 'true', 'on'    -> each plot will have same limits.
+%
 %
 %   See also EVALUATE, DISPLAY_RESULTS.
 
@@ -52,6 +58,7 @@ evaluate_only   = false;
 display_only    = false;
 safe_mode       = false;
 verbose         = true;
+equal_axis      = false;
 
 %% Arguments evaluation
 
@@ -91,6 +98,8 @@ for i = 1:2:nargin
             safe_mode = valarg;
         case 'verbose'
             safe_mode = valarg;
+        case 'equalAxis'
+            equal_axis = valarg;
         otherwise
             error('Argument %d is invalid, unrecognized argument: %s.', i, mat2str(varargin{i}));
     end
@@ -119,7 +128,7 @@ end
 % Picks results from evaluation from data folder and displays them in a
 % window
 if not(evaluate_only)
-    display_results;
+    display_results(equal_axis);
 end
 
 if deterministic

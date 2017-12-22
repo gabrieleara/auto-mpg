@@ -1,5 +1,5 @@
 function evaluate(verbose, safe_mode)
-% EVALUATE  Trains neural networks and evaluates their performances.
+%EVALUATE	Trains neural networks and evaluates their performances.
 %
 %   EVALUATE() trains neural networks and evaluates their performances,
 %       without operating in safe mode. It will print multiple messages on
@@ -12,7 +12,7 @@ function evaluate(verbose, safe_mode)
 %       evaluation of RBF networks in safe mode.
 %       See evaluate_rbf for futher details.
 %
-% See also EVALUATE_MLP, EVALUATE_RBF.
+%   See also EVALUATE_MLP, EVALUATE_RBF, DISPLAY_RESULTS.
 
 fprintf('You have launched network trainer and evaluator.\n');
 
@@ -50,11 +50,11 @@ end
 % trainings for each size.
 neurons_range = 10:10:200;
 number_trainings = 10;
-
+%{
 [mlp_bestN, mlp_mean_performances, mlp_mean_regressions, ...
     mlp_performances, mlp_regressions] = ...
         evaluate_mlp(inputs, outputs, neurons_range, number_trainings);
-
+%}
 if verbose
     fprintf('\nMLB Networks evaluation completed.\n');
 end
@@ -75,10 +75,14 @@ number_spreads = 5;
 
 % To define spread_range, we need to know distances between input points.
 distances   = pdist(inputs);
-max_dist    = max(distances);
-min_dist    = min(distances);
+max_dist    = ceil(max(distances));
+min_dist    = floor(min(distances));
 
-spread_range = min_dist:(max_dist-min_dist)/(number_spreads-1):max_dist;
+if min_dist < 1
+    min_dist = 1;
+end
+
+spread_range = floor(min_dist:(max_dist-min_dist)/(number_spreads-1):max_dist);
 
 [rbf_bestN, rbf_bestS, rbf_mean_performances, rbf_mean_regressions, ...
     rbf_performances, rbf_regressions] = ...

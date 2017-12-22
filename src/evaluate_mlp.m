@@ -2,7 +2,7 @@ function [bestN, mean_performances, mean_regressions, ...
     performances, regressions] = ...
         evaluate_mlp(inputs, outputs, neurons_range, num_training)
 
-% EVALUATE_MLP  Evaluates the best MLP network size N for the given problem.
+%EVALUATE_MLP	Evaluates the best MLP network size N for the given problem.
 %
 %   bestN = EVALUATE_MLP(inputs, outputs, neurons_range, num_training)
 %       returns the best network size inside neurons_range for the given
