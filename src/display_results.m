@@ -16,57 +16,77 @@ load('../data/auto-eval.mat', ...
     'rbf_mean_performances', 'rbf_mean_regressions', ...
     'rbf_performances', 'rbf_regressions');
 
-plot_stats(neurons_range, mlp_mean_performances, mlp_mean_regressions, 1, 'MLP Network Evaluation', equal_axis);
-plot_stats(neurons_range, rbf_mean_performances, rbf_mean_regressions, 2, 'RBF Network Evaluation', equal_axis);
+
+fig1 = plot_stats(neurons_range, mlp_mean_performances, mlp_mean_regressions, 'xtext', 'MSE', 'Regression');
+fig2 = plot_stats(neurons_range, rbf_mean_performances, rbf_mean_regressions, 'xtext', 'MSE', 'Regression');
+
+pause;
+
+close(fig1);
+close(fig2);
+ 
+[X,Y] = meshgrid(spread_range, neurons_range);
+
+tri = delaunay(X,Y);
+s = trisurf(tri, X, Y, rbf_performances);
+colormap(flipud(hot));
+shading('interp');
+s.EdgeColor = 'k';
 
 end
 
-function plot_stats(neurons_range, perf_values, regr_values, position, sub_title, equal_axis)
+function figh = plot_stats(x, y1, y2, xtext, y1text, y2text)
+figh = figure;
+[AX, hLine1, hLine2] = plotyy(x, y1, x, y2);
 
-persistent max_yaxis;
+xlabel(xtext);
 
-if(position == 1)
-    figure
-    max_yaxis = 0;
-    %subtitle('Neural Networks Evaluation for MPG prediction');
+evalc('hold(AX(1))');
+evalc('hold(AX(2))');
+
+[yy1, best] = min(y1);
+xx1 = x(best);
+
+[yy2, best] = max(y2);
+xx2 = x(best);
+
+hLine3 = plot(AX(1),xx1,yy1,'.-');
+hLine4 = plot(AX(2),xx2,yy2,'.-');
+
+[   hLine1.LineWidth, ...
+    hLine2.LineWidth, ...
+    hline3.LineWidth, ...
+    hline4.LineWidth    ] = deal(1);
+
+[   hLine3.MarkerSize, ...
+    hLine4.MarkerSize   ] = deal(20);
+
+hLine3.Color = hLine1.Color;
+hLine4.Color = hLine2.Color;
+
+legend([hLine3, hLine4], y1text, y2text);
+
+
+% Setting limits for left axis
+maxv = (ceil(max(y1)/20)+1)*20;
+AX(1).YLim      = [0 maxv];
+
+if mod(maxv,5) < 1
+    numTick = 5;
+elseif mod(maxv, 4) < 1
+    numTick = 4;
+else
+    numTick = 3;
 end
 
-subplot(1,2, position, 'replace');
+AX(1).YTick = floor(0:maxv/(numTick-1):maxv);
 
-hold on
+AX(2).YLim  = [0 1];
+AX(2).YTick = 0:1/(numTick-1):maxv;
 
-yyaxis left
-plot(neurons_range, perf_values);
-[~, best] = min(perf_values);
-L0 = plot(neurons_range(best), perf_values(best), '-o', 'MarkerSize', 12);
+[AX(1).LineWidth, AX(2).LineWidth] = deal(1.1);
 
-max_perf = ceil(max(perf_values)/10)*10;
-
-if isempty(max_yaxis) || ~equal_axis || max_perf > max_yaxis
-    max_yaxis = max_perf;
-end
-
-ylim([0,max_yaxis]);
-
-yyaxis right
-plot(neurons_range, regr_values)
-[~, best] = max(regr_values);
-L1 = plot(neurons_range(best), regr_values(best), '-o', 'MarkerSize', 12);
-
-ylim([0,1]);
-
-legend([L0, L1], 'MSE', 'Regression');
-
-title(sub_title);
-
-hold off
-
-if equal_axis
-    % Selects the other plot
-    subplot(1,2, 3-position);
-    
-    yyaxis left
-    ylim([0, max_yaxis]);
-end
+AX(1).XLim  = [0 x(end)];
+AX(1).XTick = 0:x(end)/4:x(end);
 
 end
