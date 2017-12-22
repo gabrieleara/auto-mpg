@@ -1,5 +1,6 @@
 function main(varargin)
 % MAIN  Executes the whole assignment. It may take some time.
+%
 %   MAIN(param, value, ...) executes the assignment with the given
 %       parameter, see list of parameters below. Multiple parameters can be
 %       given to the same call.
@@ -28,14 +29,29 @@ function main(varargin)
 %        .) 0, false, 'false', 'off' -> executes evaluation first;
 %        .) 1, true, 'true', 'on'    -> skips evaluation.
 %
+%   - 'safeMode' (default: false) valid only when evaluation part is not
+%   skipped. Uses standard newrb function instead of a modified one, see
+%   EVALUATE_RBF for futher details.
+%   Accepted values:
+%        .) 0, false, 'false', 'off' -> evaluation not in safe mode;
+%        .) 1, true, 'true', 'on'    -> evaluation in safe mode.
+%
+%   - 'verbose' (default: true) if enabled it will print multiple messages
+%   on the console. If not command is completely silent.
+%   Accepted values:
+%        .) 0, false, 'false', 'off' -> verbose mode off;
+%        .) 1, true, 'true', 'on'    -> verbose mode on.
+%
 %
 %   See also EVALUATE, DISPLAY_RESULTS.
 
 %% Arguments initialization
 
-deterministic = false;
-evaluateOnly = false;
-displayOnly = false;
+deterministic   = false;
+evaluate_only   = false;
+display_only    = false;
+safe_mode       = false;
+verbose         = true;
 
 %% Arguments evaluation
 
@@ -50,13 +66,13 @@ for i = 1:2:nargin
             case 'false'
             case 'true'
             case 'on'
-                valarg = 1;
+                valarg = true;
             case 'off'
-                valarg = 0;
+                valarg = false;
             case 'ON'
-                valarg = 1;
+                valarg = true;
             case 'OFF'
-                valarg = 0;
+                valarg = false;
             otherwise
                 error('Argument %d is invalid: given value: %s.', i+1, mat2str(valarg));
         end
@@ -68,15 +84,19 @@ for i = 1:2:nargin
         case 'deterministic'
             deterministic = valarg;
         case 'evaluateOnly'
-            evaluateOnly = valarg;
+            evaluate_only = valarg;
         case 'displayOnly'
-            displayOnly = valarg;
+            display_only = valarg;
+        case 'safeMode'
+            safe_mode = valarg;
+        case 'verbose'
+            safe_mode = valarg;
         otherwise
             error('Argument %d is invalid, unrecognized argument: %s.', i, mat2str(varargin{i}));
     end
 end
 
-if displayOnly && evaluateOnly
+if display_only && evaluate_only
     error("Conflicting arguments: you can't use both evaluateOnly and displayOnly.");
 end
 
@@ -92,13 +112,13 @@ end
 
 % Evaluates input data, trains networks and saves results in the data
 % folder
-if not(displayOnly)
-    evaluate;
+if not(display_only)
+    evaluate(verbose, safe_mode);
 end
 
 % Picks results from evaluation from data folder and displays them in a
 % window
-if not(evaluateOnly)
+if not(evaluate_only)
     display_results;
 end
 

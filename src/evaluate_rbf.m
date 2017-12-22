@@ -1,148 +1,206 @@
-function [best_network_size, perf_values, regr_values, best_spread] = ...
-    rbf_performance_evaluation(inputs, outputs, ...
-        neurons_range, num_trainings, ...
-        training_type, num_spreads)
+function [bestN, bestS, mean_performances, mean_regressions, ...
+    performances, regressions] = ...
+        evaluate_rbf(inputs, outputs, neurons_range, spread_range, num_training, safe_mode)
+% EVALUATE_RBF  Evaluates the best RBF network size N and spread S for the
+%               given problem.
+%
+%   [bestN, bestS] = EVALUATE_RBF(inputs, outputs, neurons_range, ...
+%                                 spread_range)
+%       returns the best network size inside neurons_range and the best
+%       spread inside spread_range for the given problem.
+%       To do so, it trains num_traning different networks for each network
+%       size, one for each spread.
+%
+%   [bestN, bestS] = EVALUATE_RBF(___, num_training)
+%       num_training argument is optional and allows for each network size
+%       and spread multiple trainings. It takes more time and each training
+%       uses only a subset of all the possible inputs in the global set.
+%
+%   [bestN, bestS, mean_performances, mean_regressions] = EVALUATE_RBF(___)
+%       returns the best network size, best spread, an array of performance
+%       evalutations and mean regression values, one for each network size.
+%       Values in performances and regressions are obtained by averaging
+%       performance evaluations and regressions of each trained networks of
+%       the same size.
+%
+%   [___, performances] = EVALUATE_RBF(___)
+%       returns also all the performances of each network that has been
+%       trained.
+%
+%   [___, performances, regressions] = EVALUATE_RBF(___)
+%       returns also all the regressions of each network that has been
+%       trained.
+%
+%   NOTICE: input and output samples shall be one sample per row.
+%
+%   NOTICE: this function uses a modified version of newrb called
+%           newrb_mod. This has been done only to disable annoying figures
+%           that show up each time a new training is performed and to speed
+%           up the whole process. The newrb version used in this project is
+%           the one provided with MATLAB R2017b.
+%
+%           If you want to use the standard newrb instead than the modified
+%           one, last argument shall be a boolean equal to true. It doesn't
+%           matter if there is or not the optional num_training argument.
+%
+%   See also EVALUATE, EVALUATE_MLP.
+%
 
-% TODO: best spread for each network size
+% If no num_training argument is provided, only one training per network
+% size and spread is executed.
+% Since the output of newrb is deterministic if same inputs are given, to
+% train multiple times with different data the network we need to limit
+% training inputs to a randomly chosen subset of the global input set.
+if nargin < 4
+    error('At least 4 arguments shall be provided.');
+elseif nargin < 5
+    num_training = 1;
+elseif nargin < 6
+    if islogical(num_training)
+        safe_mode = num_training;
+        num_training = 1;
+    else
+        safe_mode = false;
+    end
+end
 
-h = waitbar(0, strcat('RBF Evaluation - type: ', training_type));
+if num_training < 1
+    num_training = 1;
+end
 
+if safe_mode
+    newrb_f = 'newrb';
+else
+    newrb_f = 'newrb_mod';
+end
+
+% This is the command that will be used to train the network
+command = strcat(newrb_f, '(xset, tset, goal, spread, neurons_number, increment)');
+
+% Variables used to update the waitbar
+waitbar_total   = length(neurons_range)*length(spread_range)*num_training;
+waitbar_partial = 0;
+waitbar_h = waitbar(0, 'RBF Evaluation');
+
+% x are inputs, t are targets, one per column.
 x = inputs';
 t = outputs';
 
-[n,m] = size(x);
+% Placeholders for outputs
+regressions  = zeros(length(neurons_range), length(spread_range));
+performances = zeros(length(neurons_range), length(spread_range));
 
-DisplayFigure = 0; % Suppresses the window
-
+% The error we want to achieve each training
 goal = 0;
-
-perf_values = zeros(length(neurons_range), num_spreads);
-regr_values = zeros(length(neurons_range), num_spreads);
-
-best_spread = zeros(length(neurons_range));
-
-distances = pdist(inputs);
-max_dist = max(distances);
-min_dist = min(distances);
-
-% base_increment = 2^3 * 3^3 * 5^2 * 7 * 11 * 13 * 17 * 19;
-
-set(0,'DefaultFigureVisible','off'); % Does not work, but I tried
 
 % i = index of the number neurons in the current network
 for i = 1:length(neurons_range)
     
-    number_neurons = neurons_range(i);
+    neurons_number = neurons_range(i);
     
-    % increment = gcd(gcd(base_increment, number_neurons), floor(number_neurons / 3));
-    increment = number_neurons;
+    % The increment used in the newrb function to display output, we set it
+    % to the number of neurons to reduce computation time.
+    increment = neurons_number;
     
-    % s = counter of the number of spreads with the same network size
-    for s = 1:num_spreads
+    % s = index of the current evaluated spread size
+    for s = 1:length(spread_range)
         
-        waitbar(((i*num_spreads + s) / (length(neurons_range)*num_spreads)), h);
+        spread = spread_range(s);
         
-        tmp_perf_values = zeros(num_trainings, 1);
-        tmp_regr_values = zeros(num_trainings, 1);
-        
-        % j = counter of different trainings with the same network size and
-        % spread count
-        for j = 1:num_trainings
+        if num_training > 1
             
-            update_waitbar(((((i-1)*num_spreads+(s-1))*num_trainings + (j-1)) / (length(neurons_range)*num_spreads*num_trainings)), h);
+            performances_temp   = zeros(1, num_training);
+            regressions_temp    = zeros(1, num_training);
             
-            switch(training_type)
-                case 'non-exact'
-                    spread = current_static_spread(min_dist, max_dist, s, num_spreads);
-                    
-                    xset_i = sort(datasample(1:length(x),floor(length(x)*0.7), 'Replace', false));
-                    xset = x(:, xset_i);
-                    tset = t(xset_i);
+            % j = counter of different trainings with the same network size
+            % and spread
+            for j = 1:num_training
+                
+                % Updating waitbar content, it will abort any operation if the
+                % waitbar has been closed.
+                waitbar_partial = waitbar_partial+1;
+                waitbar_update(waitbar_partial/waitbar_total, waitbar_h);
+                
+                % Generate a set of indexes randomly, covering 70% of
+                % inputs
+                xset_i = sort(datasample(1:length(x), ...
+                    floor(length(x)*0.7), 'Replace', false));
 
-                    % [~, net] = evalc('newrb(x, t, goal, spread, number_neurons, 1)');
-                    [~, net] = evalc('newrb(xset, tset, goal, spread, number_neurons, increment)');
-                    
-                case 'exact-clustering'
-                    
-                    xcopy = x;
-                    tcopy = t;
-                    
-                    xset = zeros(n, number_neurons);
-                    
-                    [~, C] = kmeans(x',number_neurons);
-                    
-                    for z = 1:number_neurons
-                        
-                        x_ = xcopy';
-                        
-                        dist = pdist2(C(z, :), x_);     % compute distances
-                        mindist = min(dist);            % minimum distance
-                        center = find(dist==mindist, 1);
-                        
-                        xset(:, z) = xcopy(:, center);
-                        tset(:, z) = tcopy(center);
-                        
-                        [~, w] = size(xcopy);
-                        indexes = true(w, 1);
-                        indexes(center) = false;
-                        
-                        xcopy = xcopy(:, indexes);
-                        tcopy = tcopy(indexes);
-                    end
-                    
-                    % Calculate spread
-                    spread = max(pdist(xset')) / sqrt(number_neurons);
-                    
-                    % Perform newrbe
-                    net = newrbe(xset, tset, spread);
-                    
-                otherwise
-                    error('Incorrect value of training_type!');
+                % Obtain inputs and targets
+                xset = x(:, xset_i);
+                tset = t(xset_i);
+
+                % Evalc is needed to avoid unintended prints on the screen
+                [~, net] = evalc(command);
+                
+                % Testing and evaluating network performances
+                [performance, regression_v] = test_and_evaluate_net(net, x, t);
+
+                performances_temp(j)  = performance;
+                regressions_temp(j)   = regression_v;
             end
             
-            % Choose a Performance Function
-            net.performFcn = 'mse';  % Mean Squared Error
+            % Performances and regressions for each network size and spread
+            % are the average of the respective values of each training
+            performances(i, s)  = mean(performances_temp);
+            regressions(i, s)   = mean(regressions_temp);
             
-            % Test the Network
-            y = net(x);
+        else
+            % Updating waitbar content, it will abort any operation if the
+            % waitbar has been closed.
+            waitbar_partial = waitbar_partial+1;
+            waitbar_update(waitbar_partial/waitbar_total, waitbar_h);
+            
+            xset = x;
+            tset = t;
+            
+            % Evalc is needed to avoid unintended prints on the screen
+            [~, net] = evalc(command);
+            
+            % Testing and evaluating network performances
+            [performance, regression_v] = test_and_evaluate_net(net, x, t);
 
-            % Performance is evaluated on the whole training set
-            performance = perform(net,t,y);
-
-            % Saving data
-            tmp_perf_values(j) = performance;
-            tmp_regr_values(j) = regression(t, y);
+            performances(i, s)  = performance;
+            regressions(i, s)   = regression_v;
         end
-        
-        perf_values(i, s) = mean(tmp_perf_values);
-        regr_values(i, s) = mean(tmp_regr_values);
     end
 end
 
-close(h);
+% Obtaining mean performances for each network size
+mean_performances   = mean(performances, 2);
+mean_regressions    = mean(regressions, 2);
+
+% Chosing best index from performances array
+[~, best] = min(mean_performances);
+
+% Obtaining then best network size
+bestN = neurons_range(best);
+
+% Chosing best index for spread, based on performances array
+[~, best] = min(squeeze(performances(best, :)));
+
+% Obtaining then best spread
+bestS = spread_range(best);
+
+close(waitbar_h);
+
+% TODO: remove
 delete(findall(0,'Type','figure'));
-
-perf_values = mean(perf_values, 2);
-regr_values = mean(regr_values, 2);
-
-[~, best] = min(perf_values);
-
-best_network_size = neurons_range(best);
-
-set(0,'DefaultFigureVisible','on');
 
 end
 
+function [performance, regression_v] = test_and_evaluate_net(net, x, t)
 
-function spread = current_static_spread(min_dist, max_dist, s, num_spread)
+% Choose a Performance Function
+net.performFcn = 'mse';             % Mean Squared Error
 
-diff = max_dist - min_dist;
+% Test the Network
+y = net(x);
 
-start = diff * 0.1 + min_dist;
-stop = diff * 0.9 + max_dist;
+% Performance is evaluated on the whole training set
+performance = perform(net,t,y);
 
-norm_value = (s-num_spread) / num_spread * 6;
-
-spread = exp(norm_value) * (stop - start) + start;
+% Saving data
+regression_v = regression(t, y);
 
 end
