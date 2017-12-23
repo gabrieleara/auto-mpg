@@ -48,13 +48,13 @@ end
 
 % Range of network sizes for MLP networks to be trained and number of
 % trainings for each size.
-neurons_range = 10:10:200;
+neurons_range = 10:5:200;
 number_trainings = 10;
-%{
+
 [mlp_bestN, mlp_mean_performances, mlp_mean_regressions, ...
     mlp_performances, mlp_regressions] = ...
         evaluate_mlp(inputs, outputs, neurons_range, number_trainings);
-%}
+
 if verbose
     fprintf('\nMLB Networks evaluation completed.\n');
 end
@@ -71,7 +71,7 @@ if verbose
     end
 end
 
-number_spreads = 5;
+number_spreads = 20;
 
 % To define spread_range, we need to know distances between input points.
 distances   = pdist(inputs);
@@ -98,6 +98,7 @@ if verbose
     fprintf('\nSaving results...\n');
 end
 
+delete('../data/auto-eval.mat');
 save('../data/auto-eval.mat', ...
     'neurons_range', 'number_trainings', 'spread_range', ...
     'mlp_bestN', ...

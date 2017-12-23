@@ -1,11 +1,7 @@
-function display_results(equal_axis)
+function display_results()
 %DISPLAY_RESULTS	Reads values from savefile and displays plots of performances.
 %
 %   See also EVALUATE.
-
-if nargin < 1
-    equal_axis = false;
-end
 
 load('../data/auto-eval.mat', ...
     'neurons_range', 'number_trainings', 'spread_range', ...
@@ -22,8 +18,13 @@ fig2 = plot_stats(neurons_range, rbf_mean_performances, rbf_mean_regressions, 'x
 
 pause;
 
-close(fig1);
-close(fig2);
+if ishandle(fig1)
+    close(fig1);
+end
+
+if ishandle(fig2)
+    close(fig2);
+end
  
 [X,Y] = meshgrid(spread_range, neurons_range);
 
@@ -88,5 +89,8 @@ AX(2).YTick = 0:1/(numTick-1):maxv;
 
 AX(1).XLim  = [0 x(end)];
 AX(1).XTick = 0:x(end)/4:x(end);
+
+hold(AX(1), 'off');
+hold(AX(2), 'off');
 
 end
