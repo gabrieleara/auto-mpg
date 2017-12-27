@@ -3,6 +3,10 @@ function display_results()
 %
 %   See also EVALUATE.
 
+%% Loading Data
+
+fprintf('\nLoading evaluated data...\n');
+
 load('../data/auto-eval.mat', ...
     'neurons_range', 'number_trainings', 'spread_range', ...
     'mlp_bestN', ...
@@ -12,19 +16,92 @@ load('../data/auto-eval.mat', ...
     'rbf_mean_performances', 'rbf_mean_regressions', ...
     'rbf_performances', 'rbf_regressions');
 
+if exist('../fig') ~= 7 % so not a folder
+    mkdir('../fig');
+end
+
+%% Displaying and saving MLP results
+
+[~, bestP] = min(mlp_mean_performances);
+
+fprintf('\nResults of MLP Networks Evaluation\n');
+fprintf(' Best network size is %d, which had\n', neurons_range(bestP));
+fprintf('  - Average performance:\t%f\n',   mlp_mean_performances(bestP));
+fprintf('  - Average regression:\t\t%f\n',	mlp_mean_regressions(bestP));
+
+
+[~, bestR] = max(mlp_mean_regressions);
+
+if bestR ~= bestP
+    fprintf('\nNOTICE: conflicting results when evaluating best network size based on\n        regressions instead of performance.\n\n');
+    fprintf(' Best network size could also be %d, which had\n', neurons_range(bestR));
+    fprintf('  - Average performance:\t%f\n',   mlp_mean_performances(bestR));
+    fprintf('  - Average regression:\t\t%f\n',	mlp_mean_regressions(bestR));
+end
+
+
+fprintf('\n\nShowing average plots.\n');
 
 fig1 = plot_stats(neurons_range, mlp_mean_performances, mlp_mean_regressions, 'xtext', 'MSE', 'Regression');
-fig2 = plot_stats(neurons_range, rbf_mean_performances, rbf_mean_regressions, 'xtext', 'MSE', 'Regression');
 
+savefig(fig1, '../fig/mlp_net_eval.fig');
+
+fprintf('Press any key to continue...');
 pause;
+fprintf('\n\n');
 
 if ishandle(fig1)
     close(fig1);
 end
 
+
+%% Displaying and saving RBF results
+
+[~, bestP] = min(rbf_mean_performances);
+
+fprintf('\nResults of RBF Networks Evaluation\n');
+fprintf(' Best network size is %d\n', neurons_range(bestP));
+fprintf('  - Average performance:\t%f\n',   rbf_mean_performances(bestP));
+fprintf('  - Average regression:\t\t%f\n',  rbf_mean_regressions(bestP));
+
+fprintf(' Best spread for that network size is %d.\n', rbf_bestS);
+
+[~, bestR] = max(rbf_mean_regressions);
+
+if bestR ~= bestP
+    fprintf('\nNOTICE: conflicting results when evaluating best network size based on\n        regressions instead of performance.\n\n');
+    fprintf(' Best network size could also be %d, which had\n', neurons_range(bestR));
+    fprintf('  - Average performance:\t%f\n',   rbf_mean_performances(bestR));
+    fprintf('  - Average regression:\t\t%f\n',	rbf_mean_regressions(bestR));
+    
+    [~, bestS] = min(squeeze(rbf_performances(bestR, :)));
+    bestS = spread_range(bestS);
+    
+    fprintf(' Best spread for that network size is %d.\n', bestS);
+end
+
+
+
+
+
+fprintf('\n\nShowing average plots.\n');
+
+fig2 = plot_stats(neurons_range, rbf_mean_performances, rbf_mean_regressions, 'xtext', 'MSE', 'Regression');
+
+savefig(fig2, '../fig/rbf_net_eval.fig');
+
+fprintf('Press any key to continue...');
+pause;
+
 if ishandle(fig2)
     close(fig2);
 end
+
+fprintf('\n\n');
+
+
+
+%% Additional plots
  
 [X,Y] = meshgrid(spread_range, neurons_range);
 
