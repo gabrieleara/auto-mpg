@@ -107,7 +107,7 @@ seed = rng;
 % Execution in deterministic mode sets the seed for each Matlab random
 % number generator, hence providing always the same results.
 if deterministic
-    rng(1309);
+    rng(1601); % 1309
 end
 
 % Evaluates input data, trains networks and saves results in the data

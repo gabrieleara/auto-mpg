@@ -14,9 +14,12 @@ load('../data/auto-eval.mat', ...
     'mlp_performances', 'mlp_regressions', ...
     'rbf_bestN', 'rbf_bestS', ...
     'rbf_mean_performances', 'rbf_mean_regressions', ...
-    'rbf_performances', 'rbf_regressions');
+    'rbf_performances', 'rbf_regressions', ...
+    'rbf_n_bestN', 'rbf_n_bestS', ...
+    'rbf_n_mean_performances', 'rbf_n_mean_regressions', ...
+    'rbf_n_performances', 'rbf_n_regressions');
 
-if exist('../fig') ~= 7 % It is not a folder, so it doesn't exist
+if exist('../fig', 'dir') ~= 7 % It is not a folder, so it doesn't exist
     mkdir('../fig');
 end
 
@@ -42,7 +45,7 @@ end
 
 fprintf('\n\nShowing average plots.\n');
 
-fig1 = plot_stats(neurons_range, mlp_mean_performances, mlp_mean_regressions, 'xtext', 'MSE', 'Regression');
+fig1 = plot_stats(neurons_range, mlp_mean_performances, mlp_mean_regressions, 'Number of hidden neurons', 'MSE', 'Regression');
 
 savefig(fig1, '../fig/mlp_net_eval.fig');
 
@@ -81,12 +84,9 @@ if bestR ~= bestP
 end
 
 
-
-
-
 fprintf('\n\nShowing average plots.\n');
 
-fig1 = plot_stats(neurons_range, rbf_mean_performances, rbf_mean_regressions, 'xtext', 'MSE', 'Regression');
+fig1 = plot_stats(neurons_range, rbf_mean_performances, rbf_mean_regressions, 'Number of hidden neurons', 'MSE', 'Regression');
 
 savefig(fig1, '../fig/rbf_net_eval.fig');
 
@@ -99,6 +99,46 @@ end
 
 fprintf('\n\n');
 
+%% Displaying and saving Normalized RBF results
+
+[~, bestP] = min(rbf_n_mean_performances);
+
+fprintf('\nResults of Normalized RBF Networks Evaluation\n');
+fprintf(' Best network size is %d\n', neurons_range(bestP));
+fprintf('  - Average performance:\t%f\n',   rbf_n_mean_performances(bestP));
+fprintf('  - Average regression:\t\t%f\n',  rbf_n_mean_regressions(bestP));
+
+fprintf(' Best spread for that network size is %d.\n', rbf_n_bestS);
+
+[~, bestR] = max(rbf_n_mean_regressions);
+
+if bestR ~= bestP
+    fprintf('\nNOTICE: conflicting results when evaluating best network size based on\n        regressions instead of performance.\n\n');
+    fprintf(' Best network size could also be %d, which had\n', neurons_range(bestR));
+    fprintf('  - Average performance:\t%f\n',   rbf_n_mean_performances(bestR));
+    fprintf('  - Average regression:\t\t%f\n',	rbf_n_mean_regressions(bestR));
+    
+    [~, bestS] = min(squeeze(rbf_n_performances(bestR, :)));
+    bestS = spread_range(bestS);
+    
+    fprintf(' Best spread for that network size is %d.\n', bestS);
+end
+
+
+fprintf('\n\nShowing average plots.\n');
+
+fig1 = plot_stats(neurons_range, rbf_n_mean_performances, rbf_n_mean_regressions, 'Number of hidden neurons', 'MSE', 'Regression');
+
+savefig(fig1, '../fig/rbf_n_net_eval.fig');
+
+fprintf('Press any key to continue...');
+pause;
+
+if ishandle(fig1)
+    close(fig1);
+end
+
+fprintf('\n\n');
 
 
 %% Additional plots
@@ -119,7 +159,10 @@ fig1 = figure;
 surface = trisurf(tri, X, Y, rbf_performances);
 colormap(flipud(map));
 shading('interp');
-surface.EdgeColor = 'k';
+surface.EdgeColor = [0.5,0.5,0.5];
+
+xlabel('Spread value');
+ylabel('Number of hidden neurons');
 
 savefig(fig1, '../fig/rbf_spread_perf.fig');
 
@@ -138,7 +181,10 @@ fig1 = figure;
 surface = trisurf(tri, X, Y, rbf_regressions);
 colormap(map);
 shading('interp');
-surface.EdgeColor = 'k';
+surface.EdgeColor = [0.5,0.5,0.5];
+
+xlabel('Spread value');
+ylabel('Number of hidden neurons');
 
 savefig(fig1, '../fig/rbf_spread_regr.fig');
 

@@ -51,9 +51,9 @@ end
 neurons_range = 10:5:200;
 number_trainings = 10;
 
-[mlp_bestN, mlp_mean_performances, mlp_mean_regressions, ...
-    mlp_performances, mlp_regressions] = ...
-        evaluate_mlp(inputs, outputs, neurons_range, number_trainings);
+% [mlp_bestN, mlp_mean_performances, mlp_mean_regressions, ...
+%     mlp_performances, mlp_regressions] = ...
+%         evaluate_mlp(inputs, outputs, neurons_range, number_trainings);
 
 if verbose
     fprintf('\nMLB Networks evaluation completed.\n');
@@ -84,19 +84,62 @@ end
 
 spread_range = floor(min_dist:(max_dist-min_dist)/(number_spreads-1):max_dist);
 
-[rbf_bestN, rbf_bestS, rbf_mean_performances, rbf_mean_regressions, ...
-    rbf_performances, rbf_regressions] = ...
-        evaluate_rbf(inputs, outputs, neurons_range, spread_range, number_trainings, safe_mode);
+% [rbf_bestN, rbf_bestS, rbf_mean_performances, rbf_mean_regressions, ...
+%     rbf_performances, rbf_regressions] = ...
+%         evaluate_rbf(inputs, outputs, neurons_range, spread_range, number_trainings, safe_mode);
 
 if verbose
     fprintf('\nRBF Networks evaluation completed.\n');
 end
+
+%% RBF Network Evaluation with normalization
+
+if verbose
+    fprintf('\nTraining and evaluating RBF Networks WITH INPUTS NORMALIZATION...\nThis will take some time.\n');
+    fprintf('A window will open to let you track progress, but notice that it \nwill slow down over time, due to the longer time needed to train\nbigger networks.\n\n');
+    fprintf('If you want to abort, close the window...\n');
+
+    if safe_mode
+        fprintf('\nNOTICE: operating in safe mode. The newrb Matlab function will open multiple figures\none after the other.\nThere is no way to prevent this if you want to operate in safe mode.\n\n')
+    end
+end
+
+[~,m] = size(inputs);
+for i = 1:m
+    inputs(:,i) = inputs(:,i) / max(inputs(:,i));
+end
+
+% To define spread_range, we need to know distances between input points.
+distances   = pdist(inputs);
+max_dist    = max(distances);
+min_dist    = min(distances);
+
+spread_n_range = min_dist:(max_dist-min_dist)/(number_spreads-1):max_dist;
+
+[rbf_n_bestN, rbf_n_bestS, rbf_n_mean_performances, rbf_n_mean_regressions, ...
+    rbf_n_performances, rbf_n_regressions] = ...
+        evaluate_rbf(inputs, outputs, neurons_range, spread_n_range, number_trainings, safe_mode);
+
+if verbose
+    fprintf('\nRBF Networks evaluation completed.\n');
+end
+
+
+
 
 %% Saving results on 'auto-eval.mat' file.
 
 if verbose
     fprintf('\nSaving results...\n');
 end
+
+load('../data/auto-eval.mat', ...
+    'mlp_bestN', ...
+    'mlp_mean_performances', 'mlp_mean_regressions', ...
+    'mlp_performances', 'mlp_regressions', ...
+    'rbf_bestN', 'rbf_bestS', ...
+    'rbf_mean_performances', 'rbf_mean_regressions', ...
+    'rbf_performances', 'rbf_regressions');
 
 delete('../data/auto-eval.mat');
 save('../data/auto-eval.mat', ...
@@ -106,7 +149,11 @@ save('../data/auto-eval.mat', ...
     'mlp_performances', 'mlp_regressions', ...
     'rbf_bestN', 'rbf_bestS', ...
     'rbf_mean_performances', 'rbf_mean_regressions', ...
-    'rbf_performances', 'rbf_regressions');
+    'rbf_performances', 'rbf_regressions', ...
+    'spread_n_range', ...
+    'rbf_n_bestN', 'rbf_n_bestS', ...
+    'rbf_n_mean_performances', 'rbf_n_mean_regressions', ...
+    'rbf_n_performances', 'rbf_n_regressions');
 
 if verbose
     fprintf('\nNetwork trainer and evaluator completed execution.\n');
